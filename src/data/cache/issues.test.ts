@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { saveIssues, loadIssues, getRepoMeta } from './issues';
 import type { Issue } from '../../state/types';
-import { resetDB } from './db';
+import { resetDB, DB_NAME } from './db';
 
 const mk = (n: number): Issue => ({
   number: n,
@@ -21,9 +21,13 @@ const mk = (n: number): Issue => ({
 });
 
 beforeEach(async () => {
-  resetDB();
-  const dbs = await indexedDB.databases();
-  for (const db of dbs) if (db.name) indexedDB.deleteDatabase(db.name);
+  await resetDB();
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
+  });
 });
 
 describe('issues store', () => {

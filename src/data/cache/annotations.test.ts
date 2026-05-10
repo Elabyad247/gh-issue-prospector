@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { saveAnnotation, loadAnnotations, deleteAnnotation } from './annotations';
 import type { Annotation } from '../../state/types';
-import { resetDB } from './db';
+import { resetDB, DB_NAME } from './db';
 
 const ann = (n: number, status: Annotation['status'] = 'interested', notes = ''): Annotation => ({
   repoKey: 'o/r',
@@ -12,9 +12,13 @@ const ann = (n: number, status: Annotation['status'] = 'interested', notes = '')
 });
 
 beforeEach(async () => {
-  resetDB();
-  const dbs = await indexedDB.databases();
-  for (const db of dbs) if (db.name) indexedDB.deleteDatabase(db.name);
+  await resetDB();
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
+  });
 });
 
 describe('annotations store', () => {

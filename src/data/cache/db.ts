@@ -44,6 +44,14 @@ export function getDB(): Promise<IDBPDatabase<Schema>> {
   return dbPromise;
 }
 
-export function resetDB(): void {
+export async function resetDB(): Promise<void> {
+  if (dbPromise) {
+    try {
+      const db = await dbPromise;
+      db.close();
+    } catch {
+      // ignore
+    }
+  }
   dbPromise = null;
 }
