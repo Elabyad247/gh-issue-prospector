@@ -116,7 +116,9 @@ describe('reporterActiveWithinDays predicate', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('null disables filter', () => {
     expect(P.passesReporterActive(baseIssue, null)).toBe(true);
@@ -140,7 +142,9 @@ describe('ageDays predicate', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('null bounds disable filter', () => {
     expect(P.passesAgeDays(baseIssue, { min: null, max: null })).toBe(true);

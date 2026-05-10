@@ -6,7 +6,9 @@ describe('time helpers', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('daysSince returns whole days from ISO timestamp to now', () => {
     expect(daysSince('2026-05-09T12:00:00Z')).toBe(1);

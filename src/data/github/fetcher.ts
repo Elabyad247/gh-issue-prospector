@@ -27,7 +27,11 @@ export async function fetchAllIssues(
 
   while (true) {
     page += 1;
-    const data = await client.request<IssuePage>(ISSUES_PAGE_QUERY, { owner, name: repo, cursor });
+    const data: IssuePage = await client.request<IssuePage>(ISSUES_PAGE_QUERY, {
+      owner,
+      name: repo,
+      cursor,
+    });
     rateLimit = data.rateLimit;
     for (const raw of data.repository.issues.nodes) {
       issues.push(mapRawIssue(raw, repoKey));
@@ -38,7 +42,7 @@ export async function fetchAllIssues(
     if (!info.hasNextPage) break;
     cursor = info.endCursor;
 
-    if (rateLimit.remaining < rateLimit.cost) {
+    if (rateLimit !== null && rateLimit.remaining < rateLimit.cost) {
       partial = true;
       break;
     }
