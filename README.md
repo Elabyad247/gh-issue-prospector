@@ -2,6 +2,8 @@
 
 Personal browser-based tool for filtering OSS issues with custom signals beyond what GitHub's UI exposes (no comments, no linked PR, has repro steps, abandoned-trap detection, etc.).
 
+**Live:** https://elabyad247.github.io/gh-issue-prospector/
+
 ## Local dev
 
 ```bash
@@ -25,7 +27,7 @@ npm run build       # output in dist/
 npm run preview     # serve the production build locally on port 4173
 ```
 
-To deploy to GitHub Pages: push `dist/` to a `gh-pages` branch, or use a Pages action workflow. The app uses `base: './'` in `vite.config.ts` so it works regardless of repo path.
+Pushes to `main` auto-deploy via `.github/workflows/deploy.yml`. The app uses `base: './'` in `vite.config.ts` so it works at any repo sub-path.
 
 ## Auth
 
