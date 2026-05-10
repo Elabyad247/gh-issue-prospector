@@ -1,0 +1,14 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --error: #dc2626;
+  --bg-soft: #f9fafb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--fg); background: var(--bg); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.error { color: var(--error); margin: 8px 0; }
