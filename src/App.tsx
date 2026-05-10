@@ -4,17 +4,20 @@ import { SettingsModal } from './ui/SettingsModal';
 import { RepoBar } from './ui/RepoBar';
 import { FilterSidebar } from './ui/FilterSidebar';
 import { PresetDropdown } from './ui/PresetDropdown';
-import { IssueList } from './ui/IssueList';
+import { IssueList, type IssueListPhase } from './ui/IssueList';
 import { IssueDrawer } from './ui/IssueDrawer';
 import { ErrorBanner } from './ui/ErrorBanner';
 import { RateLimitBadge } from './ui/RateLimitBadge';
+import { Spinner } from './ui/Spinner';
 import { useAuth } from './state/hooks/useAuth';
 import { useRepoSync } from './state/hooks/useRepoSync';
 import { useFilterState } from './state/hooks/useFilterState';
 import { useFilteredIssues } from './state/hooks/useFilteredIssues';
 import { useAnnotations } from './state/hooks/useAnnotations';
+import { useTheme } from './state/hooks/useTheme';
 import { applyPreset } from './state/presets';
-import type { Issue, FilterPreset } from './state/types';
+import type { Issue, FilterPreset, FilterState } from './state/types';
+import { defaultFilterState } from './state/types';
 import {
   getLastRepo,
   setLastRepo,
@@ -23,8 +26,28 @@ import {
 } from './data/cache/localStorage';
 import { parseRepoUrl, type RepoRef } from './lib/parseRepoUrl';
 
+function isFiltersActive(state: FilterState): boolean {
+  const def = defaultFilterState;
+  return (
+    state.text !== def.text ||
+    state.labels.length > 0 ||
+    state.author !== def.author ||
+    state.assignee !== def.assignee ||
+    state.noComments !== def.noComments ||
+    state.noLinkedPR !== def.noLinkedPR ||
+    state.noAssignee !== def.noAssignee ||
+    state.closedPRMode !== def.closedPRMode ||
+    state.reporterActiveWithinDays !== def.reporterActiveWithinDays ||
+    state.ageDays.min !== def.ageDays.min ||
+    state.ageDays.max !== def.ageDays.max ||
+    state.requireReproSteps !== def.requireReproSteps ||
+    state.annotation !== def.annotation
+  );
+}
+
 export function App() {
   const auth = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [repo, setRepo] = useState<RepoRef | null>(() => {
     const last = getLastRepo();
     return last ? parseRepoUrl(last) : null;
@@ -35,7 +58,7 @@ export function App() {
 
   const repoKey = repo ? `${repo.owner}/${repo.repo}` : null;
 
-  const { issues, status, error, fetchedAt, partial, rateLimit, refresh } = useRepoSync(
+  const { issues, status, error, fetchedAt, partial, rateLimit, progress, refresh } = useRepoSync(
     auth.status === 'authenticated' ? auth.token : null,
     repo,
   );
@@ -63,11 +86,25 @@ export function App() {
   }, [repo]);
 
   if (auth.status === 'loading') {
-    return <div className="centered">Loading…</div>;
+    return (
+      <div className="centered" role="status" aria-live="polite">
+        <Spinner size={20} />
+        <span style={{ marginLeft: 10 }}>Validating saved token…</span>
+      </div>
+    );
   }
   if (auth.status === 'unauthenticated') {
     return <AuthModal onSubmit={auth.signIn} />;
   }
+
+  const phase: IssueListPhase = !repo
+    ? 'no-repo'
+    : (status === 'syncing' || status === 'loading') && issues.length === 0
+      ? 'first-load'
+      : 'ready';
+
+  const showStaleBanner = status === 'syncing' && issues.length > 0;
+  const filtersActive = isFiltersActive(filterState);
 
   return (
     <div className="app-shell">
@@ -76,11 +113,23 @@ export function App() {
         onChange={setRepo}
         onRefresh={refresh}
         fetchedAt={fetchedAt}
-        loading={status === 'syncing'}
+        status={status}
+        progress={progress}
         totalIssues={totalAvailable || null}
         onOpenSettings={() => setSettingsOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <RateLimitBadge rateLimit={rateLimit} />
+      {showStaleBanner && (
+        <div className="info-banner" role="status" aria-live="polite">
+          <Spinner size={12} label="Refreshing" />
+          <span>
+            Showing cached data while refreshing
+            {progress ? ` · page ${progress.page} · ${progress.fetched} fetched` : '…'}
+          </span>
+        </div>
+      )}
       {error && <ErrorBanner kind="generic" message={error} />}
       {partial && (
         <ErrorBanner
@@ -115,6 +164,8 @@ export function App() {
             totalShown={totalShown}
             totalAvailable={totalAvailable}
             sort={filterState.sort}
+            phase={phase}
+            filtersActive={filtersActive}
             onSortChange={(s) => setFilter('sort', s)}
             onSelectIssue={setSelected}
             onClearFilters={resetFilters}

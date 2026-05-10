@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Spinner } from './Spinner';
 
 const PAT_URL =
   'https://github.com/settings/tokens/new?description=gh-issue-prospector&scopes=public_repo';
@@ -14,10 +15,13 @@ export function AuthModal({ onSubmit }: AuthModalProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    const trimmed = token.trim();
+    if (!trimmed) return;
     setError(null);
     setBusy(true);
     try {
-      await onSubmit(token.trim());
+      await onSubmit(trimmed);
     } catch {
       setError('Invalid token. Please try again.');
     } finally {
@@ -52,8 +56,15 @@ export function AuthModal({ onSubmit }: AuthModalProps) {
             {error}
           </div>
         )}
-        <button type="submit" disabled={busy || !token}>
-          {busy ? 'Validating…' : 'Sign in'}
+        <button type="submit" disabled={busy || !token.trim()}>
+          {busy ? (
+            <span className="btn-with-spinner">
+              <Spinner size={12} label="Validating" />
+              <span>Validating with GitHub…</span>
+            </span>
+          ) : (
+            'Sign in'
+          )}
         </button>
         <p className="muted small">
           The token is stored in this browser only. Don't paste this app's URL into anything you
