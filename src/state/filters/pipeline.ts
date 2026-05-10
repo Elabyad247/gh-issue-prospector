@@ -13,20 +13,20 @@ export function applyFilters(
 
 function passesAll(issue: Issue, state: FilterState, ann: Annotation | undefined): boolean {
   return (
-    P.matchesText(issue, state.text) &&
-    P.matchesLabels(issue, state.labels, state.labelMode) &&
-    P.matchesAuthor(issue, state.author) &&
-    P.matchesAssignee(issue, state.assignee) &&
     P.passesNoComments(issue, state.noComments) &&
     P.passesNoLinkedPR(issue, state.noLinkedPR) &&
     P.passesNoAssignee(issue, state.noAssignee) &&
-    P.passesClosedPRMode(issue, state.closedPRMode) &&
-    P.passesReporterActive(issue, state.reporterActiveWithinDays) &&
-    P.passesAgeDays(issue, state.ageDays) &&
     P.passesReproSteps(issue, state.requireReproSteps) &&
+    P.passesClosedPRMode(issue, state.closedPRMode) &&
+    P.matchesAuthor(issue, state.author) &&
+    P.matchesAssignee(issue, state.assignee) &&
+    P.passesAnnotation(ann, state.annotation) &&
+    P.matchesLabels(issue, state.labels, state.labelMode) &&
+    P.passesAgeDays(issue, state.ageDays) &&
+    P.passesReporterActive(issue, state.reporterActiveWithinDays) &&
     P.inDateRange(issue.createdAt, state.createdRange) &&
     P.inDateRange(issue.updatedAt, state.updatedRange) &&
-    P.passesAnnotation(ann, state.annotation)
+    P.matchesText(issue, state.text)
   );
 }
 

@@ -1,13 +1,14 @@
+import { memo } from 'react';
 import type { Issue, Annotation } from '../state/types';
 import { ageInDays } from '../lib/time';
 
 export type IssueCardProps = {
   issue: Issue;
   annotation: Annotation | undefined;
-  onClick: () => void;
+  onSelect: (issue: Issue) => void;
 };
 
-export function IssueCard({ issue, annotation, onClick }: IssueCardProps) {
+export const IssueCard = memo(function IssueCard({ issue, annotation, onSelect }: IssueCardProps) {
   const days = ageInDays(issue.createdAt);
   const ageStr =
     days < 1 ? 'today' : days < 60 ? `${days} days ago` : `${Math.floor(days / 30)} months ago`;
@@ -15,7 +16,11 @@ export function IssueCard({ issue, annotation, onClick }: IssueCardProps) {
   const hasClosedPR = issue.linkedPRs.some((pr) => pr.state === 'CLOSED');
 
   return (
-    <button className="issue-card" onClick={onClick} aria-label={`Issue #${issue.number}`}>
+    <button
+      className="issue-card"
+      onClick={() => onSelect(issue)}
+      aria-label={`Issue #${issue.number}`}
+    >
       <div className="issue-card-line1">
         <span className="issue-num">#{issue.number}</span>
         <span className="issue-title">{issue.title}</span>
@@ -39,4 +44,4 @@ export function IssueCard({ issue, annotation, onClick }: IssueCardProps) {
       </div>
     </button>
   );
-}
+});

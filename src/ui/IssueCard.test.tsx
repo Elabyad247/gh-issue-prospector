@@ -23,7 +23,7 @@ const issue: Issue = {
 
 describe('IssueCard', () => {
   it('shows title, number, labels, comment count', () => {
-    render(<IssueCard issue={issue} annotation={undefined} onClick={vi.fn()} />);
+    render(<IssueCard issue={issue} annotation={undefined} onSelect={vi.fn()} />);
     expect(screen.getByText(/#4421/)).toBeInTheDocument();
     expect(screen.getByText(/Fix crash in resource manager/)).toBeInTheDocument();
     expect(screen.getByText(/bug/)).toBeInTheDocument();
@@ -31,12 +31,12 @@ describe('IssueCard', () => {
   });
 
   it('shows unclaimed pill when no PR + no assignee', () => {
-    render(<IssueCard issue={issue} annotation={undefined} onClick={vi.fn()} />);
+    render(<IssueCard issue={issue} annotation={undefined} onSelect={vi.fn()} />);
     expect(screen.getByText(/unclaimed/i)).toBeInTheDocument();
   });
 
   it('shows has repro pill', () => {
-    render(<IssueCard issue={issue} annotation={undefined} onClick={vi.fn()} />);
+    render(<IssueCard issue={issue} annotation={undefined} onSelect={vi.fn()} />);
     expect(screen.getByText(/has repro/i)).toBeInTheDocument();
   });
 
@@ -48,14 +48,14 @@ describe('IssueCard', () => {
       notes: '',
       updatedAt: '2026-05-10T00:00:00Z',
     };
-    render(<IssueCard issue={issue} annotation={ann} onClick={vi.fn()} />);
+    render(<IssueCard issue={issue} annotation={ann} onSelect={vi.fn()} />);
     expect(screen.getByText(/interested/i)).toBeInTheDocument();
   });
 
-  it('calls onClick when clicked', async () => {
-    const onClick = vi.fn();
-    render(<IssueCard issue={issue} annotation={undefined} onClick={onClick} />);
+  it('calls onSelect with the issue when clicked', async () => {
+    const onSelect = vi.fn();
+    render(<IssueCard issue={issue} annotation={undefined} onSelect={onSelect} />);
     await userEvent.click(screen.getByRole('button'));
-    expect(onClick).toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith(issue);
   });
 });

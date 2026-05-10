@@ -10,11 +10,9 @@ export async function saveIssues(
   const tx = db.transaction(['issues', 'repoMeta'], 'readwrite');
   const store = tx.objectStore('issues');
   const existing = await store.index('by-repo').getAllKeys(repoKey);
-  for (const key of existing) await store.delete(key);
-  for (const issue of issues) {
-    await store.put({ ...issue, repoKey });
-  }
-  await tx.objectStore('repoMeta').put({ repoKey, ...meta });
+  for (const key of existing) void store.delete(key);
+  for (const issue of issues) void store.put({ ...issue, repoKey });
+  void tx.objectStore('repoMeta').put({ repoKey, ...meta });
   await tx.done;
 }
 

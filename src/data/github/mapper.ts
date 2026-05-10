@@ -4,7 +4,8 @@ import { hasReproSteps } from '../../state/heuristics/reproSteps';
 import { deriveLinkedPRs, deriveLastReporterActivity } from '../../state/heuristics/linkedPRs';
 
 export function mapRawIssue(raw: RawIssue, repoNameWithOwner: string): Issue {
-  const bodyPreview = (raw.body ?? '').slice(0, 1000);
+  const fullBody = raw.body ?? '';
+  const bodyPreview = fullBody.slice(0, 1000);
   const reporterLogin = raw.author?.login ?? null;
   const timeline = raw.timelineItems.nodes;
   return {
@@ -20,7 +21,7 @@ export function mapRawIssue(raw: RawIssue, repoNameWithOwner: string): Issue {
     commentCount: raw.comments.totalCount,
     linkedPRs: deriveLinkedPRs(timeline, repoNameWithOwner),
     lastReporterActivityAt: deriveLastReporterActivity(timeline, reporterLogin, raw.createdAt),
-    hasReproSteps: hasReproSteps(bodyPreview),
+    hasReproSteps: hasReproSteps(fullBody),
     url: raw.url,
   };
 }

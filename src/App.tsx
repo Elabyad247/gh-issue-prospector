@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { AuthModal } from './ui/AuthModal';
 import { SettingsModal } from './ui/SettingsModal';
 import { RepoBar } from './ui/RepoBar';
@@ -69,9 +69,10 @@ export function App() {
     replace: replaceFilters,
   } = useFilterState();
   const { annotations, setStatus, setNotes } = useAnnotations(repoKey);
+  const deferredFilterState = useDeferredValue(filterState);
   const { filtered, counts, totalShown, totalAvailable } = useFilteredIssues(
     issues,
-    filterState,
+    deferredFilterState,
     annotations,
   );
 

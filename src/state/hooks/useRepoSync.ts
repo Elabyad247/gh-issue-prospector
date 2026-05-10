@@ -32,6 +32,7 @@ export function useRepoSync(
   const [progress, setProgress] = useState<FetchProgress | null>(null);
 
   const fetchInFlight = useRef(false);
+  const activeRepoKey = useRef<string | null>(null);
   const owner = ref?.owner ?? null;
   const repo = ref?.repo ?? null;
   const repoKey = owner && repo ? `${owner}/${repo}` : null;
@@ -40,28 +41,34 @@ export function useRepoSync(
     if (!token || !owner || !repo || !repoKey) return;
     if (fetchInFlight.current) return;
     fetchInFlight.current = true;
+    const myRepoKey = repoKey;
     setStatus('syncing');
     setError(null);
     try {
       const client = makeClient(token);
-      const result = await fetchAllIssues(client, owner, repo, setProgress);
+      const result = await fetchAllIssues(client, owner, repo, (p) => {
+        if (activeRepoKey.current === myRepoKey) setProgress(p);
+      });
       const now = new Date().toISOString();
-      await saveIssues(repoKey, result.issues, { fetchedAt: now, partial: result.partial });
+      await saveIssues(myRepoKey, result.issues, { fetchedAt: now, partial: result.partial });
+      if (activeRepoKey.current !== myRepoKey) return;
       setIssues(result.issues);
       setFetchedAt(now);
       setPartial(result.partial);
       setRateLimit(result.rateLimit);
       setStatus('idle');
     } catch (e) {
+      if (activeRepoKey.current !== myRepoKey) return;
       setError(e instanceof Error ? e.message : 'Unknown error');
       setStatus('error');
     } finally {
       fetchInFlight.current = false;
-      setProgress(null);
+      if (activeRepoKey.current === myRepoKey) setProgress(null);
     }
   }, [token, owner, repo, repoKey]);
 
   useEffect(() => {
+    activeRepoKey.current = repoKey;
     if (!repoKey || !token) {
       setIssues([]);
       setFetchedAt(null);

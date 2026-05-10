@@ -94,7 +94,7 @@ export function IssueList(p: IssueListProps) {
               <IssueCard
                 issue={issue}
                 annotation={p.annotations.get(issue.number)}
-                onClick={() => p.onSelectIssue(issue)}
+                onSelect={p.onSelectIssue}
               />
             </li>
           ))}
