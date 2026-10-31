@@ -14,7 +14,8 @@ export function useFilteredIssues(
   state: FilterState,
   annotations: Map<number, Annotation>,
 ): UseFilteredIssues {
-  const counts = useMemo(() => computeFilterCounts(issues), [issues]);
+  const { ignoreIdlePRs } = state;
+  const counts = useMemo(() => computeFilterCounts(issues, ignoreIdlePRs), [issues, ignoreIdlePRs]);
   return useMemo(() => {
     const filtered = applyFilters(issues, state, annotations);
     return {

@@ -1,5 +1,7 @@
-import type { Issue, Annotation, FilterState } from '../types';
-import { ageInDays, withinDays } from '../../lib/time';
+import type { Issue, Annotation, FilterState, LinkedPR } from '../types';
+import { ageInDays, daysSince, withinDays } from '../../lib/time';
+
+export const IDLE_PR_DAYS = 90;
 
 export function matchesText(issue: Issue, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -11,21 +13,14 @@ export function matchesText(issue: Issue, query: string): boolean {
   );
 }
 
+export function passesExcludedLabels(issue: Issue, excluded: string[]): boolean {
+  return !issue.labels.some((l) => excluded.includes(l));
+}
+
 export function matchesLabels(issue: Issue, wanted: string[], mode: 'AND' | 'OR'): boolean {
   if (wanted.length === 0) return true;
   const have = new Set(issue.labels);
   return mode === 'AND' ? wanted.every((l) => have.has(l)) : wanted.some((l) => have.has(l));
-}
-
-export function matchesAuthor(issue: Issue, author: string | null): boolean {
-  if (author == null) return true;
-  return issue.author?.login === author;
-}
-
-export function matchesAssignee(issue: Issue, filter: FilterState['assignee']): boolean {
-  if (filter === 'any') return true;
-  if (filter === 'none') return issue.assignees.length === 0;
-  return issue.assignees.includes(filter.login);
 }
 
 export function passesNoComments(issue: Issue, on: boolean): boolean {
@@ -36,8 +31,16 @@ export function passesNoLinkedPR(issue: Issue, on: boolean): boolean {
   return on ? issue.linkedPRs.length === 0 : true;
 }
 
-export function passesNoOpenPR(issue: Issue, on: boolean): boolean {
-  return on ? !issue.linkedPRs.some((pr) => pr.state === 'OPEN') : true;
+export function isIdlePR(pr: LinkedPR): boolean {
+  return pr.state === 'OPEN' && daysSince(pr.updatedAt) > IDLE_PR_DAYS;
+}
+
+export function blockingPRs(issue: Issue, ignoreIdle: boolean): LinkedPR[] {
+  return issue.linkedPRs.filter((pr) => pr.state === 'OPEN' && !(ignoreIdle && isIdlePR(pr)));
+}
+
+export function passesNoOpenPR(issue: Issue, on: boolean, ignoreIdle: boolean): boolean {
+  return on ? blockingPRs(issue, ignoreIdle).length === 0 : true;
 }
 
 export function passesNoAssignee(issue: Issue, on: boolean): boolean {
@@ -71,22 +74,14 @@ export function passesReproSteps(issue: Issue, required: boolean | null): boolea
   return issue.hasReproSteps === required;
 }
 
-export function inDateRange(
-  iso: string,
-  bounds: { min: string | null; max: string | null },
-): boolean {
-  const ts = Date.parse(iso);
-  if (bounds.min != null && ts < Date.parse(bounds.min)) return false;
-  if (bounds.max != null && ts > Date.parse(bounds.max + 'T23:59:59Z')) return false;
-  return true;
-}
-
 export function passesAnnotation(
   ann: Annotation | undefined,
   filter: FilterState['annotation'],
 ): boolean {
   if (filter === 'any') return true;
   if (filter === 'untriaged') return ann == null || ann.status == null;
-  if (filter === 'interested') return ann?.status === 'interested';
+  if (filter === 'interested' || filter === 'working' || filter === 'skipped') {
+    return ann?.status === filter;
+  }
   return ann?.status !== 'skipped';
 }

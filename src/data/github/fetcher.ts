@@ -1,6 +1,6 @@
-import type { GraphQLClient } from 'graphql-request';
 import type { Issue, RateLimit } from '../../state/types';
 import type { IssuePage } from './types';
+import type { GitHubClient } from './client';
 import { ISSUES_PAGE_QUERY } from './queries';
 import { mapRawIssue } from './mapper';
 import { classifyError, isAbortError } from './errors';
@@ -8,7 +8,7 @@ import { classifyError, isAbortError } from './errors';
 const MAX_ATTEMPTS = 4;
 const RETRY_BASE_MS = 1000;
 
-export type FetchProgress = { page: number; fetched: number };
+export type FetchProgress = { fetched: number; total: number; issues: Issue[] };
 
 export type FetchResult = {
   issues: Issue[];
@@ -38,17 +38,13 @@ function wait(ms: number, signal: AbortSignal | undefined): Promise<void> {
 }
 
 async function requestPage(
-  client: GraphQLClient,
-  variables: { owner: string; name: string; cursor: string | null },
+  client: GitHubClient,
+  variables: Record<string, unknown>,
   { signal, retryBaseMs = RETRY_BASE_MS }: FetchOptions,
 ): Promise<IssuePage> {
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await client.request<IssuePage>({
-        document: ISSUES_PAGE_QUERY,
-        variables,
-        ...(signal ? { signal } : {}),
-      });
+      return await client.request<IssuePage>(ISSUES_PAGE_QUERY, variables, signal);
     } catch (e) {
       if (isAbortError(e)) throw e;
       const failure = classifyError(e);
@@ -59,7 +55,7 @@ async function requestPage(
 }
 
 export async function fetchAllIssues(
-  client: GraphQLClient,
+  client: GitHubClient,
   owner: string,
   repo: string,
   onProgress: (p: FetchProgress) => void,
@@ -68,11 +64,9 @@ export async function fetchAllIssues(
   const repoKey = `${owner}/${repo}`;
   const issues: Issue[] = [];
   let cursor: string | null = null;
-  let page = 0;
   let rateLimit: RateLimit | null = null;
 
   while (true) {
-    page += 1;
     let data: IssuePage;
     try {
       data = await requestPage(client, { owner, name: repo, cursor }, options);
@@ -87,9 +81,9 @@ export async function fetchAllIssues(
     for (const raw of data.repository.issues.nodes) {
       issues.push(mapRawIssue(raw, repoKey));
     }
-    onProgress({ page, fetched: issues.length });
+    const { pageInfo: info, totalCount: total } = data.repository.issues;
+    onProgress({ fetched: issues.length, total, issues });
 
-    const info = data.repository.issues.pageInfo;
     if (!info.hasNextPage) return { issues, rateLimit, partial: false, warning: null };
     cursor = info.endCursor;
 

@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { parseRepoUrl, type RepoRef } from '../lib/parseRepoUrl';
 import type { FetchProgress } from '../data/github/fetcher';
 import type { SyncStatus } from '../state/hooks/useRepoSync';
+import type { RateLimit } from '../state/types';
 import { useNow } from '../state/hooks/useNow';
+import { timeAgo } from '../lib/time';
+import { RateLimitBadge } from './RateLimitBadge';
 import { Spinner } from './Spinner';
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../state/hooks/useTheme';
@@ -15,6 +18,7 @@ export type RepoBarProps = {
   status: SyncStatus;
   progress: FetchProgress | null;
   totalIssues: number | null;
+  rateLimit: RateLimit | null;
   onOpenSettings: () => void;
   theme: Theme;
   onToggleTheme: () => void;
@@ -50,7 +54,7 @@ export function RepoBar(props: RepoBarProps) {
     props.onRefresh();
   }
 
-  const fetchedAgeLabel = props.fetchedAt ? relativeTime(props.fetchedAt) : null;
+  const fetchedAgeLabel = props.fetchedAt ? timeAgo(props.fetchedAt) : null;
   const isStale = props.fetchedAt && Date.now() - Date.parse(props.fetchedAt) > 60 * 60 * 1000;
 
   return (
@@ -58,6 +62,7 @@ export function RepoBar(props: RepoBarProps) {
       <input
         ref={inputRef}
         type="text"
+        spellCheck={false}
         placeholder="owner/repo or github.com/owner/repo"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
@@ -81,12 +86,12 @@ export function RepoBar(props: RepoBarProps) {
 
       {props.status === 'syncing' && props.progress && (
         <span className="muted small" aria-live="polite">
-          page {props.progress.page} · {props.progress.fetched} fetched
+          {props.progress.fetched} of {props.progress.total} issues
         </span>
       )}
       {props.status !== 'syncing' && fetchedAgeLabel && (
         <span className={`muted small ${isStale ? 'stale-indicator' : ''}`}>
-          fetched {fetchedAgeLabel} ago
+          fetched {fetchedAgeLabel}
           {isStale && <span className="stale-dot" title="Cache expired — click refresh" />}
         </span>
       )}
@@ -95,6 +100,7 @@ export function RepoBar(props: RepoBarProps) {
       )}
 
       <div className="repo-bar-right">
+        <RateLimitBadge rateLimit={props.rateLimit} />
         <ThemeToggle theme={props.theme} onToggle={props.onToggleTheme} />
         <button className="settings" onClick={props.onOpenSettings} aria-label="Settings">
           ⚙
@@ -107,14 +113,4 @@ export function RepoBar(props: RepoBarProps) {
       )}
     </header>
   );
-}
-
-function relativeTime(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  const minutes = Math.floor(ms / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
 }

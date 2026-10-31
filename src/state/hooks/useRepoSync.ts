@@ -33,6 +33,7 @@ export function useRepoSync(
   const [progress, setProgress] = useState<FetchProgress | null>(null);
 
   const activeFetch = useRef<AbortController | null>(null);
+  const hasCache = useRef(false);
   const owner = ref?.owner ?? null;
   const repo = ref?.repo ?? null;
   const repoKey = owner && repo ? `${owner}/${repo}` : null;
@@ -51,7 +52,9 @@ export function useRepoSync(
         owner,
         repo,
         (p) => {
-          if (!signal.aborted) setProgress(p);
+          if (signal.aborted) return;
+          setProgress(p);
+          if (!hasCache.current) setIssues([...p.issues]);
         },
         { signal },
       );
@@ -63,6 +66,7 @@ export function useRepoSync(
       });
       const latest = result.partial ? await loadIssues(repoKey) : result.issues;
       if (signal.aborted) return;
+      hasCache.current = latest.length > 0;
       setIssues(latest);
       setFetchedAt(now);
       setPartial(result.partial);
@@ -98,6 +102,7 @@ export function useRepoSync(
         const cached = await loadIssues(repoKey);
         const meta = await getRepoMeta(repoKey);
         if (cancelled) return;
+        hasCache.current = cached.length > 0;
         setIssues(cached);
         setFetchedAt(meta?.fetchedAt ?? null);
         setPartial(meta?.partial ?? false);

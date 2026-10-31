@@ -6,6 +6,7 @@ export type UseAnnotations = {
   annotations: Map<number, Annotation>;
   setStatus: (issueNumber: number, status: AnnotationStatus) => Promise<void>;
   setNotes: (issueNumber: number, notes: string) => Promise<void>;
+  reload: () => Promise<void>;
 };
 
 export function useAnnotations(repoKey: string | null): UseAnnotations {
@@ -16,6 +17,10 @@ export function useAnnotations(repoKey: string | null): UseAnnotations {
     latest.current = next;
     setAnnotations(next);
   }, []);
+
+  const reload = useCallback(async () => {
+    publish(repoKey ? await loadAnnotations(repoKey) : new Map());
+  }, [repoKey, publish]);
 
   useEffect(() => {
     publish(new Map());
@@ -57,5 +62,5 @@ export function useAnnotations(repoKey: string | null): UseAnnotations {
     [upsert],
   );
 
-  return { annotations, setStatus, setNotes };
+  return { annotations, setStatus, setNotes, reload };
 }

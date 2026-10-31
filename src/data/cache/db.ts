@@ -2,7 +2,7 @@ import { openDB, type IDBPDatabase, type DBSchema } from 'idb';
 import type { Issue, Annotation, RateLimit } from '../../state/types';
 
 export const DB_NAME = 'gh-issue-prospector';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export type RepoMeta = {
   repoKey: string;
@@ -33,7 +33,7 @@ let dbPromise: Promise<IDBPDatabase<Schema>> | null = null;
 export function getDB(): Promise<IDBPDatabase<Schema>> {
   if (!dbPromise) {
     dbPromise = openDB<Schema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, _newVersion, tx) {
+      async upgrade(db, oldVersion, _newVersion, tx) {
         if (oldVersion < 1) {
           const issues = db.createObjectStore('issues', { keyPath: ['repoKey', 'number'] });
           issues.createIndex('by-repo', 'repoKey');
@@ -42,8 +42,18 @@ export function getDB(): Promise<IDBPDatabase<Schema>> {
           ann.createIndex('by-repo', 'repoKey');
           return;
         }
-        void tx.objectStore('issues').clear();
-        void tx.objectStore('repoMeta').clear();
+        await tx.objectStore('issues').clear();
+        await tx.objectStore('repoMeta').clear();
+        const annotations = tx.objectStore('annotations');
+        for (const annotation of await annotations.getAll()) {
+          const repoKey = annotation.repoKey.toLowerCase() as Annotation['repoKey'];
+          if (repoKey === annotation.repoKey) continue;
+          await annotations.delete([annotation.repoKey, annotation.issueNumber]);
+          await annotations.put({ ...annotation, repoKey });
+        }
+      },
+      blocking() {
+        void resetDB();
       },
     });
   }

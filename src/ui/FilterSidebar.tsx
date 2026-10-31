@@ -1,5 +1,6 @@
 import type { FilterState } from '../state/types';
 import type { FilterCounts } from '../state/filters/pipeline';
+import { IDLE_PR_DAYS } from '../state/filters/predicates';
 
 export type FilterSidebarProps = {
   state: FilterState;
@@ -7,24 +8,43 @@ export type FilterSidebarProps = {
   counts: FilterCounts;
   onSet: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onReset: () => void;
+  open: boolean;
+  onClose: () => void;
 };
 
 export function FilterSidebar(p: FilterSidebarProps) {
+  const toggleIn = (list: string[], label: string) =>
+    list.includes(label) ? list.filter((l) => l !== label) : [...list, label];
+
   const toggleLabel = (label: string) => {
-    const next = p.state.labels.includes(label)
-      ? p.state.labels.filter((l) => l !== label)
-      : [...p.state.labels, label];
-    p.onSet('labels', next);
+    p.onSet('labels', toggleIn(p.state.labels, label));
+    p.onSet(
+      'excludedLabels',
+      p.state.excludedLabels.filter((l) => l !== label),
+    );
+  };
+
+  const toggleExcluded = (label: string) => {
+    p.onSet('excludedLabels', toggleIn(p.state.excludedLabels, label));
+    p.onSet(
+      'labels',
+      p.state.labels.filter((l) => l !== label),
+    );
   };
 
   return (
-    <aside className="filter-sidebar">
+    <aside className={`filter-sidebar ${p.open ? 'filter-sidebar-open' : ''}`}>
+      <button className="filters-close" onClick={p.onClose}>
+        Close filters
+      </button>
       <h3>Search</h3>
       <input
+        id="issue-search"
         type="text"
+        spellCheck={false}
         value={p.state.text}
         onChange={(e) => p.onSet('text', e.target.value)}
-        placeholder="title, body or #number…"
+        placeholder="title, body or #number  ( / )"
       />
 
       <h3>Labels</h3>
@@ -48,15 +68,27 @@ export function FilterSidebar(p: FilterSidebarProps) {
       </div>
       <ul className="label-list">
         {p.availableLabels.map((label) => (
-          <li key={label}>
+          <li key={label} className="label-row">
             <label>
               <input
                 type="checkbox"
                 checked={p.state.labels.includes(label)}
                 onChange={() => toggleLabel(label)}
               />
-              {label}
+              <span className={p.state.excludedLabels.includes(label) ? 'label-hidden' : ''}>
+                {label}
+              </span>
+              <span className="badge">{p.counts.labels[label] ?? 0}</span>
             </label>
+            <button
+              className="label-exclude"
+              aria-pressed={p.state.excludedLabels.includes(label)}
+              aria-label={`Hide issues labelled ${label}`}
+              title={`Hide issues labelled ${label}`}
+              onClick={() => toggleExcluded(label)}
+            >
+              ⊘
+            </button>
           </li>
         ))}
       </ul>
@@ -94,6 +126,16 @@ export function FilterSidebar(p: FilterSidebarProps) {
           </label>
         </li>
         <li>
+          <label title={`Treat open PRs with no activity for ${IDLE_PR_DAYS} days as abandoned`}>
+            <input
+              type="checkbox"
+              checked={p.state.ignoreIdlePRs}
+              onChange={(e) => p.onSet('ignoreIdlePRs', e.target.checked)}
+            />
+            Ignore idle PRs ({IDLE_PR_DAYS}+ days)
+          </label>
+        </li>
+        <li>
           <label>
             <input
               type="checkbox"
@@ -118,7 +160,7 @@ export function FilterSidebar(p: FilterSidebarProps) {
       <h4>Reporter active within (days)</h4>
       <input
         type="number"
-        min={1}
+        min={0}
         value={p.state.reporterActiveWithinDays ?? ''}
         onChange={(e) =>
           p.onSet('reporterActiveWithinDays', e.target.value === '' ? null : Number(e.target.value))
@@ -129,6 +171,7 @@ export function FilterSidebar(p: FilterSidebarProps) {
       <div style={{ display: 'flex', gap: 4 }}>
         <input
           type="number"
+          min={0}
           placeholder="min"
           value={p.state.ageDays.min ?? ''}
           onChange={(e) =>
@@ -140,6 +183,7 @@ export function FilterSidebar(p: FilterSidebarProps) {
         />
         <input
           type="number"
+          min={0}
           placeholder="max"
           value={p.state.ageDays.max ?? ''}
           onChange={(e) =>
@@ -174,6 +218,8 @@ export function FilterSidebar(p: FilterSidebarProps) {
         <option value="any">Any</option>
         <option value="untriaged">Untriaged only</option>
         <option value="interested">Interested only</option>
+        <option value="working">Working on only</option>
+        <option value="skipped">Skipped only</option>
         <option value="hide-skipped">Hide skipped</option>
       </select>
 

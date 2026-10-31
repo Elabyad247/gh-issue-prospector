@@ -1,13 +1,45 @@
-import { GraphQLClient } from 'graphql-request';
 import { VIEWER_QUERY } from './queries';
 import { classifyError } from './errors';
 
 export const ENDPOINT = 'https://api.github.com/graphql';
 
-export function makeClient(token: string): GraphQLClient {
-  return new GraphQLClient(ENDPOINT, {
-    headers: { authorization: `bearer ${token}` },
-  });
+export type GitHubClient = {
+  request: <T>(
+    query: string,
+    variables?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) => Promise<T>;
+};
+
+export class GitHubRequestError extends Error {
+  constructor(
+    readonly response: {
+      status: number;
+      errors?: { type?: string; message?: string }[];
+      headers: Headers;
+    },
+  ) {
+    super(`GitHub request failed with status ${response.status}`);
+  }
+}
+
+export function makeClient(token: string): GitHubClient {
+  return {
+    async request<T>(query: string, variables?: Record<string, unknown>, signal?: AbortSignal) {
+      const response = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { authorization: `bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+        ...(signal ? { signal } : {}),
+      });
+      const { status, headers } = response;
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.data || json.errors) {
+        throw new GitHubRequestError({ status, headers, errors: json?.errors });
+      }
+      return json.data as T;
+    },
+  };
 }
 
 export class AuthError extends Error {

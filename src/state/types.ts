@@ -44,25 +44,24 @@ export type SortKey =
   | 'most-commented'
   | 'least-commented'
   | 'recently-updated'
+  | 'least-recently-updated'
   | 'most-reactions';
 
 export type FilterState = {
   text: string;
   labels: string[];
+  excludedLabels: string[];
   labelMode: 'AND' | 'OR';
-  author: string | null;
-  assignee: 'any' | 'none' | { login: string };
-  createdRange: { min: string | null; max: string | null };
-  updatedRange: { min: string | null; max: string | null };
   noComments: boolean;
   noLinkedPR: boolean;
   noOpenPR: boolean;
+  ignoreIdlePRs: boolean;
   noAssignee: boolean;
   closedPRMode: 'include' | 'exclude' | 'only';
   reporterActiveWithinDays: number | null;
   ageDays: { min: number | null; max: number | null };
   requireReproSteps: boolean | null;
-  annotation: 'any' | 'untriaged' | 'interested' | 'hide-skipped';
+  annotation: 'any' | 'untriaged' | 'interested' | 'working' | 'skipped' | 'hide-skipped';
   sort: SortKey;
 };
 
@@ -81,14 +80,12 @@ export type RateLimit = {
 export const defaultFilterState: FilterState = {
   text: '',
   labels: [],
+  excludedLabels: [],
   labelMode: 'OR',
-  author: null,
-  assignee: 'any',
-  createdRange: { min: null, max: null },
-  updatedRange: { min: null, max: null },
   noComments: false,
   noLinkedPR: false,
   noOpenPR: false,
+  ignoreIdlePRs: false,
   noAssignee: false,
   closedPRMode: 'include',
   reporterActiveWithinDays: null,
@@ -97,3 +94,9 @@ export const defaultFilterState: FilterState = {
   annotation: 'any',
   sort: 'newest',
 };
+
+export function normalizeFilters(partial: Partial<FilterState> | null): FilterState {
+  const known = Object.keys(defaultFilterState).filter((key) => partial && key in partial);
+  const picked = Object.fromEntries(known.map((key) => [key, partial?.[key as keyof FilterState]]));
+  return { ...defaultFilterState, ...picked };
+}

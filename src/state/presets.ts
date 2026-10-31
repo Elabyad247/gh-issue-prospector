@@ -1,5 +1,5 @@
 import type { FilterPreset, FilterState } from './types';
-import { defaultFilterState } from './types';
+import { normalizeFilters } from './types';
 
 export const BUILT_IN_PRESETS: FilterPreset[] = [
   {
@@ -35,5 +35,5 @@ export const BUILT_IN_PRESETS: FilterPreset[] = [
 ];
 
 export function applyPreset(current: FilterState, preset: FilterPreset): FilterState {
-  return { ...defaultFilterState, sort: current.sort, ...preset.filters };
+  return { ...normalizeFilters(preset.filters), sort: preset.filters.sort ?? current.sort };
 }

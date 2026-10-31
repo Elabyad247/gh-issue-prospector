@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import type { FilterState } from '../types';
-import { defaultFilterState } from '../types';
+import { defaultFilterState, normalizeFilters } from '../types';
 import { getStoredFilterState, setStoredFilterState } from '../../data/cache/localStorage';
 
 export type UseFilterState = {
@@ -11,10 +11,7 @@ export type UseFilterState = {
 };
 
 export function useFilterState(): UseFilterState {
-  const [state, setState] = useState<FilterState>(() => ({
-    ...defaultFilterState,
-    ...(getStoredFilterState() ?? {}),
-  }));
+  const [state, setState] = useState<FilterState>(() => normalizeFilters(getStoredFilterState()));
 
   useEffect(() => {
     setStoredFilterState(state);

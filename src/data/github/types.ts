@@ -47,6 +47,18 @@ export type RawIssue = {
   url: string;
 };
 
+export type IssueCommentNode = {
+  id: string;
+  url: string;
+  body: string;
+  createdAt: string;
+  author: { login: string } | null;
+};
+
+export type IssueCommentsPage = {
+  repository: { issue: { comments: { nodes: IssueCommentNode[] } } | null };
+};
+
 export type RateLimitInfo = {
   remaining: number;
   resetAt: string;
@@ -56,6 +68,7 @@ export type RateLimitInfo = {
 export type IssuePage = {
   repository: {
     issues: {
+      totalCount: number;
       pageInfo: { hasNextPage: boolean; endCursor: string | null };
       nodes: RawIssue[];
     };

@@ -26,6 +26,12 @@ Pushes to `main` auto-deploy via `.github/workflows/deploy.yml`. The app uses `b
 
 On first load, paste a GitHub Personal Access Token. Public repos need no scopes; tick `repo` only for private ones. The token is kept in this browser's `localStorage` and is only sent to `api.github.com`.
 
+## Triage shortcuts
+
+`/` focuses search. `j` and `k` move between issues. With an issue open, `i` marks it interested, `w` working, `s` skipped and `u` untriaged.
+
+Notes and statuses live only in this browser, so use Settings to export a backup or move them to another browser.
+
 ## Sync
 
 Each repo does a full sync at most once an hour, or when you press Refresh. Incremental sync is deliberately avoided: closing or merging a PR doesn't change the linked issue's `updatedAt`, so PR states would go stale.

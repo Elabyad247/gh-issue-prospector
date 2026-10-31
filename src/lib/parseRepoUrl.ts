@@ -7,6 +7,7 @@ const GITHUB_PREFIX = 'github.com/';
 export function parseRepoUrl(input: string): RepoRef | null {
   const stripped = input
     .trim()
+    .toLowerCase()
     .replace(/^git@github\.com:/, GITHUB_PREFIX)
     .replace(/^https?:\/\//, '')
     .replace(/^www\./, '')

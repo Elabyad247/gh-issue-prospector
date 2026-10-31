@@ -4,10 +4,23 @@ export const VIEWER_QUERY = `
   }
 `;
 
+export const ISSUE_COMMENTS_QUERY = `
+  query IssueComments($owner: String!, $name: String!, $number: Int!) {
+    repository(owner: $owner, name: $name) {
+      issue(number: $number) {
+        comments(last: 50) {
+          nodes { id url body createdAt author { login } }
+        }
+      }
+    }
+  }
+`;
+
 export const ISSUES_PAGE_QUERY = `
   query IssuesPage($owner: String!, $name: String!, $cursor: String) {
     repository(owner: $owner, name: $name) {
       issues(first: 100, after: $cursor, states: OPEN, orderBy: { field: CREATED_AT, direction: DESC }) {
+        totalCount
         pageInfo { hasNextPage endCursor }
         nodes {
           number

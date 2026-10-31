@@ -20,6 +20,10 @@ export function sortIssues(issues: Issue[], key: SortKey): Issue[] {
       return copy.sort(
         (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || byNumber(a, b),
       );
+    case 'least-recently-updated':
+      return copy.sort(
+        (a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt) || byNumber(a, b),
+      );
     case 'most-reactions':
       return copy.sort((a, b) => b.reactionCount - a.reactionCount || byNumber(a, b));
   }

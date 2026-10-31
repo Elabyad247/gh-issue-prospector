@@ -6,7 +6,7 @@ export function RateLimitBadge({ rateLimit }: { rateLimit: RateLimit | null }) {
   return (
     <span
       className={`rate-badge ${low ? 'rate-low' : ''}`}
-      title={`Resets at ${rateLimit.resetAt}`}
+      title={`Resets at ${new Date(rateLimit.resetAt).toLocaleTimeString()}`}
     >
       rate {rateLimit.remaining}
     </span>

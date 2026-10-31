@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthModal } from './ui/AuthModal';
 import { SettingsModal } from './ui/SettingsModal';
 import { RepoBar } from './ui/RepoBar';
@@ -7,7 +7,6 @@ import { PresetDropdown } from './ui/PresetDropdown';
 import { IssueList, type IssueListPhase } from './ui/IssueList';
 import { IssueDrawer } from './ui/IssueDrawer';
 import { ErrorBanner } from './ui/ErrorBanner';
-import { RateLimitBadge } from './ui/RateLimitBadge';
 import { Spinner } from './ui/Spinner';
 import { useAuth } from './state/hooks/useAuth';
 import { useRepoSync } from './state/hooks/useRepoSync';
@@ -18,12 +17,14 @@ import { useTheme } from './state/hooks/useTheme';
 import { applyPreset } from './state/presets';
 import type { Issue, FilterPreset, FilterState } from './state/types';
 import { defaultFilterState } from './state/types';
+import type { GitHubFailure } from './data/github/errors';
 import {
   getLastRepo,
   setLastRepo,
   getUserPresets,
   setUserPresets,
 } from './data/cache/localStorage';
+import { isTyping } from './lib/dom';
 import { parseRepoUrl, type RepoRef } from './lib/parseRepoUrl';
 
 function isFiltersActive(state: FilterState): boolean {
@@ -41,8 +42,11 @@ export function App() {
     return last ? parseRepoUrl(last) : null;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [dismissedError, setDismissedError] = useState<GitHubFailure | null>(null);
   const [userPresets, setUserPresetsState] = useState<FilterPreset[]>(() => getUserPresets());
+  const lastIndex = useRef(0);
 
   const repoKey = repo ? `${repo.owner}/${repo.repo}` : null;
 
@@ -56,7 +60,7 @@ export function App() {
     reset: resetFilters,
     replace: replaceFilters,
   } = useFilterState();
-  const { annotations, setStatus, setNotes } = useAnnotations(repoKey);
+  const { annotations, setStatus, setNotes, reload: reloadAnnotations } = useAnnotations(repoKey);
   const deferredFilterState = useDeferredValue(filterState);
   const { filtered, counts, totalShown, totalAvailable } = useFilteredIssues(
     issues,
@@ -71,23 +75,49 @@ export function App() {
   const selectIssue = useCallback((issue: Issue) => setSelectedNumber(issue.number), []);
 
   const availableLabels = useMemo(() => {
-    const set = new Set<string>(filterState.labels);
+    const set = new Set<string>([...filterState.labels, ...filterState.excludedLabels]);
     for (const i of issues) for (const l of i.labels) set.add(l);
     return [...set].sort();
-  }, [issues, filterState.labels]);
+  }, [issues, filterState.labels, filterState.excludedLabels]);
 
   const changeRepo = useCallback(
     (next: RepoRef) => {
       setSelectedNumber(null);
       setFilter('labels', []);
+      setFilter('excludedLabels', []);
+      setFilter('text', '');
       setRepo(next);
     },
     [setFilter],
   );
 
+  const savePresets = useCallback((next: FilterPreset[]) => {
+    setUserPresetsState(next);
+    setUserPresets(next);
+  }, []);
+
+  const selectedIndex = filtered.findIndex((i) => i.number === selectedNumber);
+  if (selectedIndex >= 0) lastIndex.current = selectedIndex;
+  const nextIssue = filtered[selectedIndex >= 0 ? selectedIndex + 1 : lastIndex.current];
+  const previousIssue = filtered[lastIndex.current - 1];
+  const firstIssue = filtered[0];
+
   useEffect(() => {
     if (repo) setLastRepo(`${repo.owner}/${repo.repo}`);
   }, [repo]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('issue-search')?.focus();
+      }
+      if (e.key === 'j' && selectedNumber === null && firstIssue) selectIssue(firstIssue);
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [selectedNumber, firstIssue, selectIssue]);
 
   if (auth.status === 'loading') {
     return (
@@ -109,7 +139,7 @@ export function App() {
         ? 'load-failed'
         : 'ready';
 
-  const showStaleBanner = status === 'syncing' && issues.length > 0;
+  const showStaleBanner = status === 'syncing' && issues.length > 0 && fetchedAt !== null;
   const filtersActive = isFiltersActive(filterState);
 
   return (
@@ -122,24 +152,22 @@ export function App() {
         status={status}
         progress={progress}
         totalIssues={totalAvailable || null}
+        rateLimit={rateLimit}
         onOpenSettings={() => setSettingsOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
-      <RateLimitBadge rateLimit={rateLimit} />
       {showStaleBanner && (
         <div className="info-banner" role="status" aria-live="polite">
           <Spinner size={12} label="Refreshing" />
-          <span>
-            Showing cached data while refreshing
-            {progress ? ` · page ${progress.page} · ${progress.fetched} fetched` : '…'}
-          </span>
+          <span>Showing cached issues while refreshing…</span>
         </div>
       )}
-      {error && (
+      {error && error !== dismissedError && (
         <ErrorBanner
           kind={error.kind}
           message={error.message}
+          onDismiss={() => setDismissedError(error)}
           {...(error.resetAt ? { resetAt: error.resetAt } : {})}
         />
       )}
@@ -157,22 +185,35 @@ export function App() {
           counts={counts}
           onSet={setFilter}
           onReset={resetFilters}
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
         />
         <section className="list-and-toolbar">
           <div className="list-toolbar">
+            <button
+              className="filters-toggle"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              Filters
+            </button>
             <PresetDropdown
               userPresets={userPresets}
               onApply={(preset) => replaceFilters(applyPreset(filterState, preset))}
-              onSaveCurrent={(name) => {
-                const next = [...userPresets, { name, builtIn: false, filters: filterState }];
-                setUserPresetsState(next);
-                setUserPresets(next);
-              }}
+              onSaveCurrent={(name) =>
+                savePresets([
+                  ...userPresets.filter((preset) => preset.name !== name),
+                  { name, builtIn: false, filters: filterState },
+                ])
+              }
+              onDelete={(name) => savePresets(userPresets.filter((preset) => preset.name !== name))}
             />
           </div>
           <IssueList
             issues={filtered}
             annotations={annotations}
+            selectedNumber={selectedNumber}
+            ignoreIdlePRs={deferredFilterState.ignoreIdlePRs}
             totalShown={totalShown}
             totalAvailable={totalAvailable}
             sort={filterState.sort}
@@ -187,8 +228,13 @@ export function App() {
           <IssueDrawer
             issue={selected}
             annotation={annotations.get(selected.number)}
+            token={auth.token}
+            repoKey={repoKey}
+            position={selectedIndex >= 0 ? `${selectedIndex + 1} of ${filtered.length}` : null}
             onSetStatus={(s) => setStatus(selected.number, s)}
             onSetNotes={(n) => setNotes(selected.number, n)}
+            onPrevious={previousIssue ? () => selectIssue(previousIssue) : null}
+            onNext={nextIssue ? () => selectIssue(nextIssue) : null}
             onClose={() => setSelectedNumber(null)}
           />
         )}
@@ -199,6 +245,7 @@ export function App() {
           login={auth.login ?? 'unknown (GitHub unreachable)'}
           onSignOut={auth.signOut}
           onClose={() => setSettingsOpen(false)}
+          onAnnotationsImported={() => void reloadAnnotations()}
         />
       )}
     </div>

@@ -8,6 +8,8 @@ export type IssueListPhase = 'no-repo' | 'first-load' | 'load-failed' | 'ready';
 export type IssueListProps = {
   issues: Issue[];
   annotations: Map<number, Annotation>;
+  selectedNumber: number | null;
+  ignoreIdlePRs: boolean;
   totalShown: number;
   totalAvailable: number;
   sort: SortKey;
@@ -83,6 +85,7 @@ export function IssueList(p: IssueListProps) {
           <option value="most-commented">Most commented</option>
           <option value="least-commented">Least commented</option>
           <option value="recently-updated">Recently updated</option>
+          <option value="least-recently-updated">Least recently updated</option>
           <option value="most-reactions">Most reactions</option>
         </select>
       </div>
@@ -108,6 +111,8 @@ export function IssueList(p: IssueListProps) {
               <IssueCard
                 issue={issue}
                 annotation={p.annotations.get(issue.number)}
+                selected={issue.number === p.selectedNumber}
+                ignoreIdlePRs={p.ignoreIdlePRs}
                 onSelect={p.onSelectIssue}
               />
             </li>
