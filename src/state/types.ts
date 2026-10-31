@@ -3,12 +3,17 @@ export type RepoKey = `${string}/${string}`;
 export type LinkedPR = {
   number: number;
   state: 'OPEN' | 'CLOSED' | 'MERGED';
+  title: string;
+  url: string;
+  author: string | null;
+  updatedAt: string;
+  isDraft: boolean;
 };
 
 export type Issue = {
   number: number;
   title: string;
-  bodyPreview: string;
+  body: string;
   state: 'OPEN' | 'CLOSED';
   author: { login: string } | null;
   assignees: string[];
@@ -16,6 +21,7 @@ export type Issue = {
   createdAt: string;
   updatedAt: string;
   commentCount: number;
+  reactionCount: number;
   linkedPRs: LinkedPR[];
   lastReporterActivityAt: string | null;
   hasReproSteps: boolean;
@@ -37,7 +43,8 @@ export type SortKey =
   | 'oldest'
   | 'most-commented'
   | 'least-commented'
-  | 'recently-updated';
+  | 'recently-updated'
+  | 'most-reactions';
 
 export type FilterState = {
   text: string;
@@ -49,6 +56,7 @@ export type FilterState = {
   updatedRange: { min: string | null; max: string | null };
   noComments: boolean;
   noLinkedPR: boolean;
+  noOpenPR: boolean;
   noAssignee: boolean;
   closedPRMode: 'include' | 'exclude' | 'only';
   reporterActiveWithinDays: number | null;
@@ -80,6 +88,7 @@ export const defaultFilterState: FilterState = {
   updatedRange: { min: null, max: null },
   noComments: false,
   noLinkedPR: false,
+  noOpenPR: false,
   noAssignee: false,
   closedPRMode: 'include',
   reporterActiveWithinDays: null,

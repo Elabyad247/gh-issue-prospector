@@ -18,7 +18,8 @@ export function SettingsModal({ token, login, onSignOut, onClose }: SettingsModa
           Token: <code>{masked}</code>
         </p>
         <p className="muted small">
-          The token sits in your browser. Don't paste this app's URL into anything you don't trust.
+          The token is kept in this browser's <code>localStorage</code> and is only sent to
+          api.github.com.
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button

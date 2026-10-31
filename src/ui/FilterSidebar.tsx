@@ -24,7 +24,7 @@ export function FilterSidebar(p: FilterSidebarProps) {
         type="text"
         value={p.state.text}
         onChange={(e) => p.onSet('text', e.target.value)}
-        placeholder="title or body…"
+        placeholder="title, body or #number…"
       />
 
       <h3>Labels</h3>
@@ -87,6 +87,16 @@ export function FilterSidebar(p: FilterSidebarProps) {
           <label>
             <input
               type="checkbox"
+              checked={p.state.noOpenPR}
+              onChange={(e) => p.onSet('noOpenPR', e.target.checked)}
+            />
+            No open PR <span className="badge">{p.counts.noOpenPR}</span>
+          </label>
+        </li>
+        <li>
+          <label>
+            <input
+              type="checkbox"
               checked={p.state.noAssignee}
               onChange={(e) => p.onSet('noAssignee', e.target.checked)}
             />
@@ -111,10 +121,7 @@ export function FilterSidebar(p: FilterSidebarProps) {
         min={1}
         value={p.state.reporterActiveWithinDays ?? ''}
         onChange={(e) =>
-          p.onSet(
-            'reporterActiveWithinDays',
-            e.target.value === '' ? null : Number(e.target.value),
-          )
+          p.onSet('reporterActiveWithinDays', e.target.value === '' ? null : Number(e.target.value))
         }
       />
 
@@ -146,7 +153,9 @@ export function FilterSidebar(p: FilterSidebarProps) {
 
       <h4>Repro steps</h4>
       <select
-        value={p.state.requireReproSteps == null ? 'either' : p.state.requireReproSteps ? 'yes' : 'no'}
+        value={
+          p.state.requireReproSteps == null ? 'either' : p.state.requireReproSteps ? 'yes' : 'no'
+        }
         onChange={(e) => {
           const v = e.target.value;
           p.onSet('requireReproSteps', v === 'either' ? null : v === 'yes');

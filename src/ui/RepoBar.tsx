@@ -35,7 +35,6 @@ export function RepoBar(props: RepoBarProps) {
   }, [props.value]);
 
   function submit() {
-    if (busy) return;
     const parsed = parseRepoUrl(draft);
     if (!parsed) {
       setError('Use owner/repo or a github.com URL.');
@@ -52,8 +51,7 @@ export function RepoBar(props: RepoBarProps) {
   }
 
   const fetchedAgeLabel = props.fetchedAt ? relativeTime(props.fetchedAt) : null;
-  const isStale =
-    props.fetchedAt && Date.now() - Date.parse(props.fetchedAt) > 60 * 60 * 1000;
+  const isStale = props.fetchedAt && Date.now() - Date.parse(props.fetchedAt) > 60 * 60 * 1000;
 
   return (
     <header className="repo-bar">
@@ -67,9 +65,8 @@ export function RepoBar(props: RepoBarProps) {
           if (e.key === 'Enter') submit();
         }}
         aria-label="Repository"
-        disabled={busy && !props.value}
       />
-      <button onClick={() => submit()} disabled={busy || !draft.trim()}>
+      <button onClick={() => submit()} disabled={!draft.trim()}>
         Load
       </button>
       <button

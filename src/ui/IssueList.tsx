@@ -3,7 +3,7 @@ import { IssueCard } from './IssueCard';
 import { IssueCardSkeleton } from './IssueCardSkeleton';
 import { EmptyState } from './EmptyState';
 
-export type IssueListPhase = 'no-repo' | 'first-load' | 'ready';
+export type IssueListPhase = 'no-repo' | 'first-load' | 'load-failed' | 'ready';
 
 export type IssueListProps = {
   issues: Issue[];
@@ -31,7 +31,9 @@ export function IssueList(p: IssueListProps) {
               open issues. The first sync can take 30–60 seconds for a large repo.
             </>
           }
-          {...(p.onPickRepo ? { action: { label: 'Focus repo input', onClick: p.onPickRepo } } : {})}
+          {...(p.onPickRepo
+            ? { action: { label: 'Focus repo input', onClick: p.onPickRepo } }
+            : {})}
         />
       </main>
     );
@@ -54,6 +56,17 @@ export function IssueList(p: IssueListProps) {
     );
   }
 
+  if (p.phase === 'load-failed') {
+    return (
+      <main className="issue-list">
+        <EmptyState
+          title="Couldn't load this repository"
+          description="Check the message above, then try Refresh or load another repo."
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="issue-list">
       <div className="issue-list-header">
@@ -70,6 +83,7 @@ export function IssueList(p: IssueListProps) {
           <option value="most-commented">Most commented</option>
           <option value="least-commented">Least commented</option>
           <option value="recently-updated">Recently updated</option>
+          <option value="most-reactions">Most reactions</option>
         </select>
       </div>
       {p.issues.length === 0 ? (

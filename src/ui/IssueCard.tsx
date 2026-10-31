@@ -12,7 +12,8 @@ export const IssueCard = memo(function IssueCard({ issue, annotation, onSelect }
   const days = ageInDays(issue.createdAt);
   const ageStr =
     days < 1 ? 'today' : days < 60 ? `${days} days ago` : `${Math.floor(days / 30)} months ago`;
-  const unclaimed = issue.assignees.length === 0 && issue.linkedPRs.length === 0;
+  const openPRs = issue.linkedPRs.filter((pr) => pr.state === 'OPEN');
+  const unclaimed = issue.assignees.length === 0 && openPRs.length === 0;
   const hasClosedPR = issue.linkedPRs.some((pr) => pr.state === 'CLOSED');
 
   return (
@@ -33,12 +34,20 @@ export const IssueCard = memo(function IssueCard({ issue, annotation, onSelect }
         ))}
         <span>· {ageStr}</span>
         <span>· {issue.commentCount} comments</span>
+        {issue.reactionCount > 0 && <span>· {issue.reactionCount} reactions</span>}
       </div>
       <div className="issue-card-line3 small">
         {unclaimed && <span className="pill pill-good">unclaimed</span>}
+        {openPRs.map((pr) => (
+          <span key={pr.number} className="pill pill-warn">
+            {pr.isDraft ? 'draft' : 'open'} PR #{pr.number}
+          </span>
+        ))}
         {issue.hasReproSteps && <span className="pill">has repro</span>}
         {hasClosedPR && <span className="pill pill-warn">closed PR linked</span>}
-        {annotation?.status === 'interested' && <span className="pill pill-star">★ interested</span>}
+        {annotation?.status === 'interested' && (
+          <span className="pill pill-star">★ interested</span>
+        )}
         {annotation?.status === 'skipped' && <span className="pill pill-mute">skipped</span>}
         {annotation?.status === 'working' && <span className="pill pill-good">working on</span>}
       </div>

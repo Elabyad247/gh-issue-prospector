@@ -9,12 +9,17 @@ export type AnnotationEditorProps = {
 
 export function AnnotationEditor(p: AnnotationEditorProps) {
   const [notes, setNotes] = useState(p.annotation?.notes ?? '');
-  const dirty = useRef(false);
+  const unsaved = useRef<string | null>(null);
+  const saveNotes = useRef(p.onSetNotes);
+  saveNotes.current = p.onSetNotes;
 
-  useEffect(() => {
-    setNotes(p.annotation?.notes ?? '');
-    dirty.current = false;
-  }, [p.annotation?.issueNumber]);
+  function flush() {
+    if (unsaved.current === null) return;
+    saveNotes.current(unsaved.current);
+    unsaved.current = null;
+  }
+
+  useEffect(() => flush, []);
 
   const status: AnnotationStatus = p.annotation?.status ?? null;
 
@@ -42,15 +47,10 @@ export function AnnotationEditor(p: AnnotationEditorProps) {
           rows={4}
           value={notes}
           onChange={(e) => {
-            dirty.current = true;
+            unsaved.current = e.target.value;
             setNotes(e.target.value);
           }}
-          onBlur={() => {
-            if (dirty.current) {
-              p.onSetNotes(notes);
-              dirty.current = false;
-            }
-          }}
+          onBlur={flush}
         />
       </label>
     </section>

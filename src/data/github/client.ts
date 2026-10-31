@@ -1,5 +1,6 @@
 import { GraphQLClient } from 'graphql-request';
 import { VIEWER_QUERY } from './queries';
+import { classifyError } from './errors';
 
 export const ENDPOINT = 'https://api.github.com/graphql';
 
@@ -19,7 +20,8 @@ export async function validateToken(token: string): Promise<{ login: string }> {
   try {
     const data = await makeClient(token).request<{ viewer: { login: string } }>(VIEWER_QUERY);
     return data.viewer;
-  } catch {
-    throw new AuthError();
+  } catch (e) {
+    if (classifyError(e).kind === 'auth') throw new AuthError();
+    throw e;
   }
 }

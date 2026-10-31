@@ -1,27 +1,26 @@
 export type RepoRef = { owner: string; repo: string };
 
-export function parseRepoUrl(input: string): RepoRef | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
+const OWNER_RE = /^[\w-]+$/;
+const REPO_RE = /^[\w.-]+$/;
+const GITHUB_PREFIX = 'github.com/';
 
-  let stripped = trimmed
+export function parseRepoUrl(input: string): RepoRef | null {
+  const stripped = input
+    .trim()
+    .replace(/^git@github\.com:/, GITHUB_PREFIX)
     .replace(/^https?:\/\//, '')
-    .replace(/^github\.com\//, '')
+    .replace(/^www\./, '')
     .replace(/[?#].*$/, '')
-    .replace(/\.git$/, '')
-    .replace(/\/(issues|pulls)(\/.*)?$/, '')
     .replace(/\/+$/, '');
 
-  if (stripped.startsWith('gitlab.com') || stripped.startsWith('bitbucket.org')) {
-    return null;
-  }
+  const hosted = stripped.startsWith(GITHUB_PREFIX);
+  const path = hosted ? stripped.slice(GITHUB_PREFIX.length) : stripped;
+  const parts = path.split('/');
+  if (hosted ? parts.length < 2 : parts.length !== 2) return null;
 
-  if (stripped.includes('//')) return null;
-
-  const parts = stripped.split('/').filter(Boolean);
-  if (parts.length !== 2) return null;
-  const [owner, repo] = parts;
-  if (!owner || !repo) return null;
+  const owner = parts[0] ?? '';
+  const repo = (parts[1] ?? '').replace(/\.git$/, '');
+  if (!OWNER_RE.test(owner) || !REPO_RE.test(repo)) return null;
 
   return { owner, repo };
 }

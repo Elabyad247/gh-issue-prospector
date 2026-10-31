@@ -2,9 +2,13 @@ import type { Issue, Annotation, FilterState } from '../types';
 import { ageInDays, withinDays } from '../../lib/time';
 
 export function matchesText(issue: Issue, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return issue.title.toLowerCase().includes(q) || issue.bodyPreview.toLowerCase().includes(q);
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    `#${issue.number}` === q ||
+    issue.title.toLowerCase().includes(q) ||
+    issue.body.toLowerCase().includes(q)
+  );
 }
 
 export function matchesLabels(issue: Issue, wanted: string[], mode: 'AND' | 'OR'): boolean {
@@ -30,6 +34,10 @@ export function passesNoComments(issue: Issue, on: boolean): boolean {
 
 export function passesNoLinkedPR(issue: Issue, on: boolean): boolean {
   return on ? issue.linkedPRs.length === 0 : true;
+}
+
+export function passesNoOpenPR(issue: Issue, on: boolean): boolean {
+  return on ? !issue.linkedPRs.some((pr) => pr.state === 'OPEN') : true;
 }
 
 export function passesNoAssignee(issue: Issue, on: boolean): boolean {

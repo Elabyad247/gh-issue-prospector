@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { AuthModal } from './ui/AuthModal';
 import { SettingsModal } from './ui/SettingsModal';
 import { RepoBar } from './ui/RepoBar';
@@ -27,21 +27,9 @@ import {
 import { parseRepoUrl, type RepoRef } from './lib/parseRepoUrl';
 
 function isFiltersActive(state: FilterState): boolean {
-  const def = defaultFilterState;
   return (
-    state.text !== def.text ||
-    state.labels.length > 0 ||
-    state.author !== def.author ||
-    state.assignee !== def.assignee ||
-    state.noComments !== def.noComments ||
-    state.noLinkedPR !== def.noLinkedPR ||
-    state.noAssignee !== def.noAssignee ||
-    state.closedPRMode !== def.closedPRMode ||
-    state.reporterActiveWithinDays !== def.reporterActiveWithinDays ||
-    state.ageDays.min !== def.ageDays.min ||
-    state.ageDays.max !== def.ageDays.max ||
-    state.requireReproSteps !== def.requireReproSteps ||
-    state.annotation !== def.annotation
+    JSON.stringify({ ...state, sort: defaultFilterState.sort }) !==
+    JSON.stringify(defaultFilterState)
   );
 }
 
@@ -53,7 +41,7 @@ export function App() {
     return last ? parseRepoUrl(last) : null;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [selected, setSelected] = useState<Issue | null>(null);
+  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [userPresets, setUserPresetsState] = useState<FilterPreset[]>(() => getUserPresets());
 
   const repoKey = repo ? `${repo.owner}/${repo.repo}` : null;
@@ -76,11 +64,26 @@ export function App() {
     annotations,
   );
 
+  const selected = useMemo(
+    () => issues.find((i) => i.number === selectedNumber) ?? null,
+    [issues, selectedNumber],
+  );
+  const selectIssue = useCallback((issue: Issue) => setSelectedNumber(issue.number), []);
+
   const availableLabels = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(filterState.labels);
     for (const i of issues) for (const l of i.labels) set.add(l);
     return [...set].sort();
-  }, [issues]);
+  }, [issues, filterState.labels]);
+
+  const changeRepo = useCallback(
+    (next: RepoRef) => {
+      setSelectedNumber(null);
+      setFilter('labels', []);
+      setRepo(next);
+    },
+    [setFilter],
+  );
 
   useEffect(() => {
     if (repo) setLastRepo(`${repo.owner}/${repo.repo}`);
@@ -102,7 +105,9 @@ export function App() {
     ? 'no-repo'
     : (status === 'syncing' || status === 'loading') && issues.length === 0
       ? 'first-load'
-      : 'ready';
+      : status === 'error' && issues.length === 0
+        ? 'load-failed'
+        : 'ready';
 
   const showStaleBanner = status === 'syncing' && issues.length > 0;
   const filtersActive = isFiltersActive(filterState);
@@ -111,7 +116,7 @@ export function App() {
     <div className="app-shell">
       <RepoBar
         value={repo}
-        onChange={setRepo}
+        onChange={changeRepo}
         onRefresh={refresh}
         fetchedAt={fetchedAt}
         status={status}
@@ -131,11 +136,17 @@ export function App() {
           </span>
         </div>
       )}
-      {error && <ErrorBanner kind="generic" message={error} />}
+      {error && (
+        <ErrorBanner
+          kind={error.kind}
+          message={error.message}
+          {...(error.resetAt ? { resetAt: error.resetAt } : {})}
+        />
+      )}
       {partial && (
         <ErrorBanner
           kind="partial"
-          message={`Partial cache: showing ${issues.length} issues. Try refresh after rate limit resets.`}
+          message={`Sync stopped early: the newest issues are fresh, older ones are from the last sync. Showing ${issues.length} issues.`}
           {...(rateLimit ? { resetAt: rateLimit.resetAt } : {})}
         />
       )}
@@ -168,7 +179,7 @@ export function App() {
             phase={phase}
             filtersActive={filtersActive}
             onSortChange={(s) => setFilter('sort', s)}
-            onSelectIssue={setSelected}
+            onSelectIssue={selectIssue}
             onClearFilters={resetFilters}
           />
         </section>
@@ -178,14 +189,14 @@ export function App() {
             annotation={annotations.get(selected.number)}
             onSetStatus={(s) => setStatus(selected.number, s)}
             onSetNotes={(n) => setNotes(selected.number, n)}
-            onClose={() => setSelected(null)}
+            onClose={() => setSelectedNumber(null)}
           />
         )}
       </div>
       {settingsOpen && auth.status === 'authenticated' && auth.token && (
         <SettingsModal
           token={auth.token}
-          login={auth.login}
+          login={auth.login ?? 'unknown (GitHub unreachable)'}
           onSignOut={auth.signOut}
           onClose={() => setSettingsOpen(false)}
         />

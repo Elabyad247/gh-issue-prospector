@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Annotation, AnnotationStatus, RepoKey } from '../types';
 import { loadAnnotations, saveAnnotation } from '../../data/cache/annotations';
 
@@ -10,25 +10,29 @@ export type UseAnnotations = {
 
 export function useAnnotations(repoKey: string | null): UseAnnotations {
   const [annotations, setAnnotations] = useState<Map<number, Annotation>>(new Map());
+  const latest = useRef(annotations);
+
+  const publish = useCallback((next: Map<number, Annotation>) => {
+    latest.current = next;
+    setAnnotations(next);
+  }, []);
 
   useEffect(() => {
-    if (!repoKey) {
-      setAnnotations(new Map());
-      return;
-    }
+    publish(new Map());
+    if (!repoKey) return;
     let cancelled = false;
     loadAnnotations(repoKey).then((m) => {
-      if (!cancelled) setAnnotations(m);
+      if (!cancelled) publish(m);
     });
     return () => {
       cancelled = true;
     };
-  }, [repoKey]);
+  }, [repoKey, publish]);
 
   const upsert = useCallback(
     async (issueNumber: number, patch: Partial<Annotation>) => {
       if (!repoKey) return;
-      const existing = annotations.get(issueNumber);
+      const existing = latest.current.get(issueNumber);
       const next: Annotation = {
         repoKey: repoKey as RepoKey,
         issueNumber,
@@ -37,10 +41,10 @@ export function useAnnotations(repoKey: string | null): UseAnnotations {
         ...patch,
         updatedAt: new Date().toISOString(),
       };
+      publish(new Map(latest.current).set(issueNumber, next));
       await saveAnnotation(next);
-      setAnnotations((m) => new Map(m).set(issueNumber, next));
     },
-    [repoKey, annotations],
+    [repoKey, publish],
   );
 
   const setStatus = useCallback(

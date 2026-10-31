@@ -1,15 +1,21 @@
 export type GraphQLPRState = 'OPEN' | 'CLOSED' | 'MERGED';
 export type GraphQLIssueState = 'OPEN' | 'CLOSED';
 
+export type RawPullRequest = {
+  number: number;
+  title: string;
+  url: string;
+  state: GraphQLPRState;
+  isDraft: boolean;
+  updatedAt: string;
+  author: { login: string } | null;
+  repository: { nameWithOwner: string };
+};
+
 export type CrossReferencedEvent = {
   __typename: 'CrossReferencedEvent';
   source:
-    | {
-        __typename: 'PullRequest';
-        number: number;
-        state: GraphQLPRState;
-        repository: { nameWithOwner: string };
-      }
+    | ({ __typename: 'PullRequest' } & RawPullRequest)
     | {
         __typename: 'Issue';
         number: number;
@@ -35,6 +41,8 @@ export type RawIssue = {
   createdAt: string;
   updatedAt: string;
   comments: { totalCount: number };
+  reactions: { totalCount: number };
+  closedByPullRequestsReferences: { nodes: RawPullRequest[] };
   timelineItems: { nodes: TimelineItem[] };
   url: string;
 };

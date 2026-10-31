@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { AuthError } from '../data/github/client';
+import { classifyError } from '../data/github/errors';
 import { Spinner } from './Spinner';
 
-const PAT_URL =
-  'https://github.com/settings/tokens/new?description=gh-issue-prospector&scopes=public_repo';
+const PAT_URL = 'https://github.com/settings/tokens/new?description=gh-issue-prospector';
 
 export type AuthModalProps = {
   onSubmit: (token: string) => Promise<void>;
@@ -22,8 +23,10 @@ export function AuthModal({ onSubmit }: AuthModalProps) {
     setBusy(true);
     try {
       await onSubmit(trimmed);
-    } catch {
-      setError('Invalid token. Please try again.');
+    } catch (e) {
+      setError(
+        e instanceof AuthError ? 'Invalid token. Please try again.' : classifyError(e).message,
+      );
     } finally {
       setBusy(false);
     }
@@ -34,8 +37,8 @@ export function AuthModal({ onSubmit }: AuthModalProps) {
       <form className="modal" onSubmit={handleSubmit}>
         <h2 id="auth-title">Sign in</h2>
         <p>
-          Paste a GitHub Personal Access Token. Only <code>public_repo</code> scope is required (use{' '}
-          <code>repo</code> for private repos).{' '}
+          Paste a GitHub Personal Access Token. Public repos need no scopes, so leave every box
+          unticked (tick <code>repo</code> only for private repos).{' '}
           <a href={PAT_URL} target="_blank" rel="noreferrer">
             Create a personal access token →
           </a>
@@ -67,8 +70,8 @@ export function AuthModal({ onSubmit }: AuthModalProps) {
           )}
         </button>
         <p className="muted small">
-          The token is stored in this browser only. Don't paste this app's URL into anything you
-          don't trust.
+          The token is kept in this browser's <code>localStorage</code> and is only sent to
+          api.github.com.
         </p>
       </form>
     </div>

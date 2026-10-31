@@ -14,14 +14,14 @@ export function useFilteredIssues(
   state: FilterState,
   annotations: Map<number, Annotation>,
 ): UseFilteredIssues {
+  const counts = useMemo(() => computeFilterCounts(issues), [issues]);
   return useMemo(() => {
     const filtered = applyFilters(issues, state, annotations);
-    const counts = computeFilterCounts(issues, state, annotations);
     return {
       filtered,
       counts,
       totalShown: filtered.length,
       totalAvailable: issues.length,
     };
-  }, [issues, state, annotations]);
+  }, [issues, state, annotations, counts]);
 }

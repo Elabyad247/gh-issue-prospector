@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Issue, Annotation, AnnotationStatus } from '../state/types';
 import { AnnotationEditor } from './AnnotationEditor';
+import { LinkedPRList } from './LinkedPRList';
 
 export type IssueDrawerProps = {
   issue: Issue;
@@ -11,13 +12,14 @@ export type IssueDrawerProps = {
 };
 
 export function IssueDrawer(p: IssueDrawerProps) {
+  const { onClose } = p;
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') p.onClose();
+      if (e.key === 'Escape') onClose();
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [p.onClose]);
+  }, [onClose]);
 
   return (
     <>
@@ -38,12 +40,20 @@ export function IssueDrawer(p: IssueDrawerProps) {
             <span>created {new Date(p.issue.createdAt).toLocaleDateString()}</span>
             <span>·</span>
             <span>{p.issue.commentCount} comments</span>
+            {p.issue.assignees.length > 0 && (
+              <>
+                <span>·</span>
+                <span>assigned to {p.issue.assignees.join(', ')}</span>
+              </>
+            )}
           </p>
-          <pre className="issue-body">{p.issue.bodyPreview}</pre>
+          <LinkedPRList prs={p.issue.linkedPRs} />
+          <pre className="issue-body">{p.issue.body}</pre>
           <a className="drawer-link" href={p.issue.url} target="_blank" rel="noreferrer">
             Open on GitHub ↗
           </a>
           <AnnotationEditor
+            key={p.issue.number}
             annotation={p.annotation}
             onSetStatus={p.onSetStatus}
             onSetNotes={p.onSetNotes}

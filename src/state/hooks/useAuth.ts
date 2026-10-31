@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { validateToken } from '../../data/github/client';
+import { AuthError, validateToken } from '../../data/github/client';
 import { getToken, setToken, clearToken } from '../../data/cache/localStorage';
 
 export type AuthState =
   | { status: 'loading'; login: null }
-  | { status: 'authenticated'; login: string }
+  | { status: 'authenticated'; login: string | null }
   | { status: 'unauthenticated'; login: null };
 
 export type UseAuth = AuthState & {
@@ -27,11 +27,14 @@ export function useAuth(): UseAuth {
       .then(({ login }) => {
         if (!cancelled) setState({ status: 'authenticated', login });
       })
-      .catch(() => {
-        if (!cancelled) {
+      .catch((e) => {
+        if (cancelled) return;
+        if (e instanceof AuthError) {
           clearToken();
           setTokenState(null);
           setState({ status: 'unauthenticated', login: null });
+        } else {
+          setState({ status: 'authenticated', login: null });
         }
       });
     return () => {

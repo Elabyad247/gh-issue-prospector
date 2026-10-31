@@ -20,17 +20,17 @@ export const ISSUES_PAGE_QUERY = `
           createdAt
           updatedAt
           comments { totalCount }
-          timelineItems(first: 100, itemTypes: [CROSS_REFERENCED_EVENT, ISSUE_COMMENT]) {
+          reactions { totalCount }
+          closedByPullRequestsReferences(first: 10, includeClosedPrs: true) {
+            nodes { ...LinkedPullRequest }
+          }
+          timelineItems(last: 100, itemTypes: [CROSS_REFERENCED_EVENT, ISSUE_COMMENT]) {
             nodes {
               __typename
               ... on CrossReferencedEvent {
                 source {
                   __typename
-                  ... on PullRequest {
-                    number
-                    state
-                    repository { nameWithOwner }
-                  }
+                  ...LinkedPullRequest
                   ... on Issue {
                     number
                   }
@@ -47,5 +47,16 @@ export const ISSUES_PAGE_QUERY = `
       }
     }
     rateLimit { remaining resetAt cost }
+  }
+
+  fragment LinkedPullRequest on PullRequest {
+    number
+    title
+    url
+    state
+    isDraft
+    updatedAt
+    author { login }
+    repository { nameWithOwner }
   }
 `;

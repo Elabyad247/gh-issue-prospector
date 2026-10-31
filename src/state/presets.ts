@@ -1,6 +1,12 @@
 import type { FilterPreset, FilterState } from './types';
+import { defaultFilterState } from './types';
 
 export const BUILT_IN_PRESETS: FilterPreset[] = [
+  {
+    name: 'Unclaimed bugs',
+    builtIn: true,
+    filters: { labels: ['bug'], noOpenPR: true, noAssignee: true, annotation: 'hide-skipped' },
+  },
   {
     name: 'Pristine unclaimed',
     builtIn: true,
@@ -19,10 +25,15 @@ export const BUILT_IN_PRESETS: FilterPreset[] = [
   {
     name: 'Good first look',
     builtIn: true,
-    filters: { noAssignee: true, requireReproSteps: true, ageDays: { min: 30, max: 365 } },
+    filters: {
+      noOpenPR: true,
+      noAssignee: true,
+      requireReproSteps: true,
+      ageDays: { min: 30, max: 365 },
+    },
   },
 ];
 
 export function applyPreset(current: FilterState, preset: FilterPreset): FilterState {
-  return { ...current, ...preset.filters };
+  return { ...defaultFilterState, sort: current.sort, ...preset.filters };
 }

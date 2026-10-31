@@ -15,6 +15,7 @@ function passesAll(issue: Issue, state: FilterState, ann: Annotation | undefined
   return (
     P.passesNoComments(issue, state.noComments) &&
     P.passesNoLinkedPR(issue, state.noLinkedPR) &&
+    P.passesNoOpenPR(issue, state.noOpenPR) &&
     P.passesNoAssignee(issue, state.noAssignee) &&
     P.passesReproSteps(issue, state.requireReproSteps) &&
     P.passesClosedPRMode(issue, state.closedPRMode) &&
@@ -34,19 +35,17 @@ export type FilterCounts = {
   total: number;
   noComments: number;
   noLinkedPR: number;
+  noOpenPR: number;
   noAssignee: number;
   hasRepro: number;
 };
 
-export function computeFilterCounts(
-  issues: Issue[],
-  _state: FilterState,
-  _annotations: Map<number, Annotation>,
-): FilterCounts {
+export function computeFilterCounts(issues: Issue[]): FilterCounts {
   return {
     total: issues.length,
     noComments: issues.filter((i) => i.commentCount === 0).length,
     noLinkedPR: issues.filter((i) => i.linkedPRs.length === 0).length,
+    noOpenPR: issues.filter((i) => P.passesNoOpenPR(i, true)).length,
     noAssignee: issues.filter((i) => i.assignees.length === 0).length,
     hasRepro: issues.filter((i) => i.hasReproSteps).length,
   };
