@@ -1,6 +1,6 @@
 # gh-issue-prospector
 
-Personal browser-based tool for filtering OSS issues with custom signals beyond what GitHub's UI exposes (no comments, no linked PR, has repro steps, abandoned-trap detection, etc.).
+Personal browser-based tool for filtering OSS issues with custom signals beyond what GitHub's UI exposes (no comments, no open PR, has repro steps, abandoned-trap detection, etc.).
 
 **Live:** https://elabyad247.github.io/gh-issue-prospector/
 
@@ -13,13 +13,6 @@ npm run dev
 
 Vite serves on `http://localhost:5173`.
 
-## Test
-
-```bash
-npm test            # one-shot
-npm run test:watch  # watch mode
-```
-
 ## Build & deploy
 
 ```bash
@@ -31,7 +24,11 @@ Pushes to `main` auto-deploy via `.github/workflows/deploy.yml`. The app uses `b
 
 ## Auth
 
-On first load, paste a GitHub Personal Access Token (`public_repo` scope; `repo` for private repos). The token sits in `localStorage` and never leaves the browser.
+On first load, paste a GitHub Personal Access Token. Public repos need no scopes; tick `repo` only for private ones. The token is kept in this browser's `localStorage` and is only sent to `api.github.com`.
+
+## Sync
+
+Each repo does a full sync at most once an hour, or when you press Refresh. Incremental sync is deliberately avoided: closing or merging a PR doesn't change the linked issue's `updatedAt`, so PR states would go stale.
 
 ## Architecture
 
